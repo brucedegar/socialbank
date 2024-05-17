@@ -13,6 +13,11 @@ Foundry consists of:
 
 https://book.getfoundry.sh/
 
+## Install on local
+```shell
+forge install /OpenZeppelin/openzeppelin-contracts --no-commit
+```
+
 ## Usage
 
 ### Build
