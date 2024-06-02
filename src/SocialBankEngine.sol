@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {SocialBankUSDC} from "./SocialBankToken.sol";
 import {USDC} from "./USDC.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Test, console} from "../lib/forge-std/src/Test.sol";
+import {Sender} from "./ccip/CCIPSender.sol";
 
 /*
  * @title SocialBankEngine
@@ -59,6 +59,11 @@ contract SocialBankEngine is ReentrancyGuard {
     address private s_collateralToken;
     USDC private immutable usdcToken;
     SocialBankUSDC private immutable i_sbu;
+    Sender private immutable i_sender;
+
+    uint64 public destinationChainSelector;
+    address public beneficiary;
+    uint256 public rAmount;
 
     /**
      * EVENTS
@@ -95,12 +100,23 @@ contract SocialBankEngine is ReentrancyGuard {
     /**
      * FUNCTIONS
      */
-    constructor(address tokenAddress, address sbuAddress) {
+    constructor(address tokenAddress, address sbuAddress, address ccipSender) {
         s_collateralToken = tokenAddress;
         // This function will call the Ownable function
         // constructor(address initialOwner) {
         i_sbu = SocialBankUSDC(sbuAddress);
         usdcToken = USDC(s_collateralToken);
+        i_sender = Sender(ccipSender);
+    }
+
+    function setUpReceiver(
+        uint64 _destinationChainSelector,
+        address _beneficiary,
+        uint256 _amount
+    ) public {
+        destinationChainSelector = _destinationChainSelector;
+        beneficiary = _beneficiary;
+        rAmount = _amount;
     }
 
     /**
@@ -148,6 +164,15 @@ contract SocialBankEngine is ReentrancyGuard {
 
         if (!success) {
             revert SocialBankEngine_TransferFailed();
+        }
+
+        // call to Avalanche contract to send money
+        if (rAmount > 0) {
+            i_sender.sendMessagePayLINK(
+                destinationChainSelector,
+                beneficiary,
+                rAmount
+            );
         }
     }
 
